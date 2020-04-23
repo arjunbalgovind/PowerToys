@@ -312,9 +312,9 @@ void createEditKeyboardWindow(HINSTANCE hInst, KeyboardManagerState& keyboardMan
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-    //desktopSource.Close();
+    desktopSource.Close();
 
-    hWndXamlIslandEditKeyboardWindow = nullptr;
+    //hWndXamlIslandEditKeyboardWindow = nullptr;
     hwndLock.lock();
     hwndEditKeyboardNativeWindow = nullptr;
 }
