@@ -345,13 +345,13 @@ public:
     intptr_t HandleKeyboardHookEvent(LowlevelKeyboardEvent* data) noexcept
     {
         // If the Detect Key Window is currently activated, then suppress the keyboard event
-        if (keyboardManagerState.DetectSingleRemapKeyUIBackend(data))
+        if (keyboardManagerState.DetectSingleRemapKeyUIBackend(data) == KeyboardManagerHelper::KeyboardHookDecision::Suppress)
         {
             return 1;
         }
 
         // If the Detect Shortcut Window is currently activated, then suppress the keyboard event
-        if (keyboardManagerState.DetectShortcutUIBackend(data))
+        if (keyboardManagerState.DetectShortcutUIBackend(data) == KeyboardManagerHelper::KeyboardHookDecision::Suppress)
         {
             return 1;
         }
