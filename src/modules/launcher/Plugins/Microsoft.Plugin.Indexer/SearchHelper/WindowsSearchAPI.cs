@@ -18,7 +18,8 @@ namespace Microsoft.Plugin.Indexer.SearchHelper
             List<SearchResult> _Result = new List<SearchResult>();
             // Generate SQL from our parameters, converting the userQuery from AQS->WHERE clause
             string sqlQuery = queryHelper.GenerateSQLFromUserQuery(keyword);
-
+            System.Diagnostics.Stopwatch stopWatch = new System.Diagnostics.Stopwatch();
+            stopWatch.Start();
             // --- Perform the query ---
             // create an OleDbConnection object which connects to the indexer provider with the windows application
             using (conn = new OleDbConnection(queryHelper.ConnectionString))
@@ -32,7 +33,16 @@ namespace Microsoft.Plugin.Indexer.SearchHelper
                     // execute the command, which returns the results as an OleDbDataReader.
                     using (WDSResults = command.ExecuteReader())
                     {
-                        if(WDSResults.HasRows)
+
+                        stopWatch.Stop();
+                        System.IO.FileStream fileStream = System.IO.File.Open("D:\\Code\\PowerToys\\indexer1.txt", System.IO.FileMode.Append, System.IO.FileAccess.Write);
+                        // Encapsulate the filestream object in a StreamWriter instance.
+                        System.IO.StreamWriter fileWriter = new System.IO.StreamWriter(fileStream);
+                        // Write the current date time to the file
+                        fileWriter.WriteLine(keyword+ ", " + sqlQuery + " : " + stopWatch.Elapsed);
+                        fileWriter.Flush();
+                        fileWriter.Close();
+                        if (WDSResults.HasRows)
                         {
                             while (WDSResults.Read())
                             {
