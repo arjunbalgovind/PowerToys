@@ -34,14 +34,6 @@ namespace Microsoft.Plugin.Indexer.SearchHelper
                     using (WDSResults = command.ExecuteReader())
                     {
 
-                        stopWatch.Stop();
-                        System.IO.FileStream fileStream = System.IO.File.Open("D:\\Code\\PowerToys\\indexer1.txt", System.IO.FileMode.Append, System.IO.FileAccess.Write);
-                        // Encapsulate the filestream object in a StreamWriter instance.
-                        System.IO.StreamWriter fileWriter = new System.IO.StreamWriter(fileStream);
-                        // Write the current date time to the file
-                        fileWriter.WriteLine(keyword+ ", " + sqlQuery + " : " + stopWatch.Elapsed);
-                        fileWriter.Flush();
-                        fileWriter.Close();
                         if (WDSResults.HasRows)
                         {
                             while (WDSResults.Read())
@@ -61,6 +53,16 @@ namespace Microsoft.Plugin.Indexer.SearchHelper
                     }
                 }
             }
+
+
+            stopWatch.Stop();
+            System.IO.FileStream fileStream = System.IO.File.Open("..\\..\\indexer_query_debug.log", System.IO.FileMode.Append, System.IO.FileAccess.Write);
+            // Encapsulate the filestream object in a StreamWriter instance.
+            System.IO.StreamWriter fileWriter = new System.IO.StreamWriter(fileStream);
+            // Write the current date time to the file
+            fileWriter.WriteLine(keyword + ", " + sqlQuery + " : " + stopWatch.Elapsed);
+            fileWriter.Flush();
+            fileWriter.Close();
 
             return _Result;
         }
