@@ -151,7 +151,7 @@ bool KeyboardManagerState::AddOSLevelShortcut(const Shortcut& originalSC, const 
         return false;
     }
 
-    osLevelShortcutReMap[originalSC] = RemapKey(newRemapKey);
+    osLevelShortcutReMap[originalSC] = RemapShortcut(newRemapKey);
     return true;
 }
 
@@ -512,15 +512,15 @@ bool KeyboardManagerState::SaveConfigToFile()
         keys.SetNamedValue(KeyboardManagerConstants::OriginalKeysSettingName, json::value(it.first.ToHstringVK()));
 
         // For shortcut to key remapping
-        if (it.second.index() == 0)
+        if (it.second.target.index() == 0)
         {
-            keys.SetNamedValue(KeyboardManagerConstants::NewRemapKeysSettingName, json::value(winrt::to_hstring((unsigned int)std::get<RemapKey>(it.second).key)));
+            keys.SetNamedValue(KeyboardManagerConstants::NewRemapKeysSettingName, json::value(winrt::to_hstring((unsigned int)std::get<DWORD>(it.second.target))));
         }
 
         // For shortcut to shortcut remapping
         else
         {
-            keys.SetNamedValue(KeyboardManagerConstants::NewRemapKeysSettingName, json::value(std::get<RemapShortcut>(it.second).targetShortcut.ToHstringVK()));
+            keys.SetNamedValue(KeyboardManagerConstants::NewRemapKeysSettingName, json::value(std::get<Shortcut>(it.second.target).ToHstringVK()));
         }
 
         globalRemapShortcutsArray.Append(keys);
@@ -535,7 +535,19 @@ bool KeyboardManagerState::SaveConfigToFile()
         {
             json::JsonObject keys;
             keys.SetNamedValue(KeyboardManagerConstants::OriginalKeysSettingName, json::value(itKeys.first.ToHstringVK()));
-            keys.SetNamedValue(KeyboardManagerConstants::NewRemapKeysSettingName, json::value(itKeys.second.targetShortcut.ToHstringVK()));
+
+            // For shortcut to key remapping
+            if (itKeys.second.target.index() == 0)
+            {
+                keys.SetNamedValue(KeyboardManagerConstants::NewRemapKeysSettingName, json::value(winrt::to_hstring((unsigned int)std::get<DWORD>(itKeys.second.target))));
+            }
+
+            // For shortcut to shortcut remapping
+            else
+            {
+                keys.SetNamedValue(KeyboardManagerConstants::NewRemapKeysSettingName, json::value(std::get<Shortcut>(itKeys.second.target).ToHstringVK()));
+            }
+
             keys.SetNamedValue(KeyboardManagerConstants::TargetAppSettingName, json::value(itApp.first));
 
             appSpecificRemapShortcutsArray.Append(keys);

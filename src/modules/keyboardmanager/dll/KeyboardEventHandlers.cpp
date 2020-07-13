@@ -242,8 +242,11 @@ namespace KeyboardEventHandlers
                 continue;
             }
 
+            // Check if the remap is to a key or a shortcut
+            bool remapToShortcut = (it.second.target.index() == 1);
+
             const size_t src_size = it.first.Size();
-            const size_t dest_size = it.second.targetShortcut.Size();
+            const size_t dest_size = remapToShortcut ? std::get<Shortcut>(it.second.target).Size() : 1;
 
             // If the shortcut has been pressed down
             if (!it.second.isShortcutInvoked && it.first.CheckModifiersKeyboardState(ii))
@@ -269,45 +272,105 @@ namespace KeyboardEventHandlers
                         it.second.winKeyInvoked = ModifierKey::Left;
                     }
 
-                    // Get the common keys between the two shortcuts
-                    int commonKeys = it.first.GetCommonModifiersCount(it.second.targetShortcut);
-
-                    // If the original shortcut modifiers are a subset of the new shortcut
-                    if (commonKeys == src_size - 1)
+                    if (remapToShortcut)
                     {
-                        // key down for all new shortcut keys except the common modifiers
-                        key_count = dest_size - commonKeys;
-                        keyEventList = new INPUT[key_count]();
-                        memset(keyEventList, 0, sizeof(keyEventList));
-                        int i = 0;
+                        // Get the common keys between the two shortcuts
+                        int commonKeys = it.first.GetCommonModifiersCount(std::get<Shortcut>(it.second.target));
 
-                        if ((it.second.targetShortcut.GetWinKey(it.second.winKeyInvoked) != it.first.GetWinKey(it.second.winKeyInvoked)) && it.second.targetShortcut.GetWinKey(it.second.winKeyInvoked) != NULL)
+                        // If the original shortcut modifiers are a subset of the new shortcut
+                        if (commonKeys == src_size - 1)
                         {
-                            KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.second.targetShortcut.GetWinKey(it.second.winKeyInvoked), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+                            // key down for all new shortcut keys except the common modifiers
+                            key_count = dest_size - commonKeys;
+                            keyEventList = new INPUT[key_count]();
+                            memset(keyEventList, 0, sizeof(keyEventList));
+                            int i = 0;
+
+                            if ((std::get<Shortcut>(it.second.target).GetWinKey(it.second.winKeyInvoked) != it.first.GetWinKey(it.second.winKeyInvoked)) && std::get<Shortcut>(it.second.target).GetWinKey(it.second.winKeyInvoked) != NULL)
+                            {
+                                KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)std::get<Shortcut>(it.second.target).GetWinKey(it.second.winKeyInvoked), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+                                i++;
+                            }
+                            if ((std::get<Shortcut>(it.second.target).GetCtrlKey() != it.first.GetCtrlKey()) && std::get<Shortcut>(it.second.target).GetCtrlKey() != NULL)
+                            {
+                                KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)std::get<Shortcut>(it.second.target).GetCtrlKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+                                i++;
+                            }
+                            if ((std::get<Shortcut>(it.second.target).GetAltKey() != it.first.GetAltKey()) && std::get<Shortcut>(it.second.target).GetAltKey() != NULL)
+                            {
+                                KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)std::get<Shortcut>(it.second.target).GetAltKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+                                i++;
+                            }
+                            if ((std::get<Shortcut>(it.second.target).GetShiftKey() != it.first.GetShiftKey()) && std::get<Shortcut>(it.second.target).GetShiftKey() != NULL)
+                            {
+                                KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)std::get<Shortcut>(it.second.target).GetShiftKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+                                i++;
+                            }
+                            KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)std::get<Shortcut>(it.second.target).GetActionKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
                             i++;
                         }
-                        if ((it.second.targetShortcut.GetCtrlKey() != it.first.GetCtrlKey()) && it.second.targetShortcut.GetCtrlKey() != NULL)
+                        else
                         {
-                            KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.second.targetShortcut.GetCtrlKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+                            // Dummy key, key up for all the original shortcut modifier keys and key down for all the new shortcut keys but common keys in each are not repeated
+                            key_count = 1 + (src_size - 1) + (dest_size) - (2 * (size_t)commonKeys);
+                            keyEventList = new INPUT[key_count]();
+                            memset(keyEventList, 0, sizeof(keyEventList));
+
+                            // Send dummy key
+                            int i = 0;
+                            KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)KeyboardManagerConstants::DUMMY_KEY, KEYEVENTF_KEYUP, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+                            i++;
+                            // Release original shortcut state (release in reverse order of shortcut to be accurate)
+                            if ((std::get<Shortcut>(it.second.target).GetShiftKey() != it.first.GetShiftKey()) && it.first.GetShiftKey() != NULL)
+                            {
+                                KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.first.GetShiftKey(), KEYEVENTF_KEYUP, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+                                i++;
+                            }
+                            if ((std::get<Shortcut>(it.second.target).GetAltKey() != it.first.GetAltKey()) && it.first.GetAltKey() != NULL)
+                            {
+                                KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.first.GetAltKey(), KEYEVENTF_KEYUP, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+                                i++;
+                            }
+                            if ((std::get<Shortcut>(it.second.target).GetCtrlKey() != it.first.GetCtrlKey()) && it.first.GetCtrlKey() != NULL)
+                            {
+                                KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.first.GetCtrlKey(), KEYEVENTF_KEYUP, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+                                i++;
+                            }
+                            if ((std::get<Shortcut>(it.second.target).GetWinKey(it.second.winKeyInvoked) != it.first.GetWinKey(it.second.winKeyInvoked)) && it.first.GetWinKey(it.second.winKeyInvoked) != NULL)
+                            {
+                                KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.first.GetWinKey(it.second.winKeyInvoked), KEYEVENTF_KEYUP, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+                                i++;
+                            }
+
+                            // Set new shortcut key down state
+                            if ((std::get<Shortcut>(it.second.target).GetWinKey(it.second.winKeyInvoked) != it.first.GetWinKey(it.second.winKeyInvoked)) && std::get<Shortcut>(it.second.target).GetWinKey(it.second.winKeyInvoked) != NULL)
+                            {
+                                KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)std::get<Shortcut>(it.second.target).GetWinKey(it.second.winKeyInvoked), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+                                i++;
+                            }
+                            if ((std::get<Shortcut>(it.second.target).GetCtrlKey() != it.first.GetCtrlKey()) && std::get<Shortcut>(it.second.target).GetCtrlKey() != NULL)
+                            {
+                                KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)std::get<Shortcut>(it.second.target).GetCtrlKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+                                i++;
+                            }
+                            if ((std::get<Shortcut>(it.second.target).GetAltKey() != it.first.GetAltKey()) && std::get<Shortcut>(it.second.target).GetAltKey() != NULL)
+                            {
+                                KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)std::get<Shortcut>(it.second.target).GetAltKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+                                i++;
+                            }
+                            if ((std::get<Shortcut>(it.second.target).GetShiftKey() != it.first.GetShiftKey()) && std::get<Shortcut>(it.second.target).GetShiftKey() != NULL)
+                            {
+                                KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)std::get<Shortcut>(it.second.target).GetShiftKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+                                i++;
+                            }
+                            KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)std::get<Shortcut>(it.second.target).GetActionKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
                             i++;
                         }
-                        if ((it.second.targetShortcut.GetAltKey() != it.first.GetAltKey()) && it.second.targetShortcut.GetAltKey() != NULL)
-                        {
-                            KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.second.targetShortcut.GetAltKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
-                            i++;
-                        }
-                        if ((it.second.targetShortcut.GetShiftKey() != it.first.GetShiftKey()) && it.second.targetShortcut.GetShiftKey() != NULL)
-                        {
-                            KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.second.targetShortcut.GetShiftKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
-                            i++;
-                        }
-                        KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.second.targetShortcut.GetActionKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
-                        i++;
                     }
                     else
                     {
                         // Dummy key, key up for all the original shortcut modifier keys and key down for all the new shortcut keys but common keys in each are not repeated
-                        key_count = 1 + (src_size - 1) + (dest_size) - (2 * (size_t)commonKeys);
+                        key_count = 1 + (src_size - 1);
                         keyEventList = new INPUT[key_count]();
                         memset(keyEventList, 0, sizeof(keyEventList));
 
@@ -316,49 +379,37 @@ namespace KeyboardEventHandlers
                         KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)KeyboardManagerConstants::DUMMY_KEY, KEYEVENTF_KEYUP, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
                         i++;
                         // Release original shortcut state (release in reverse order of shortcut to be accurate)
-                        if ((it.second.targetShortcut.GetShiftKey() != it.first.GetShiftKey()) && it.first.GetShiftKey() != NULL)
+                        if (it.first.GetShiftKey() != NULL)
                         {
                             KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.first.GetShiftKey(), KEYEVENTF_KEYUP, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
                             i++;
                         }
-                        if ((it.second.targetShortcut.GetAltKey() != it.first.GetAltKey()) && it.first.GetAltKey() != NULL)
+                        if (it.first.GetAltKey() != NULL)
                         {
                             KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.first.GetAltKey(), KEYEVENTF_KEYUP, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
                             i++;
                         }
-                        if ((it.second.targetShortcut.GetCtrlKey() != it.first.GetCtrlKey()) && it.first.GetCtrlKey() != NULL)
+                        if (it.first.GetCtrlKey() != NULL)
                         {
                             KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.first.GetCtrlKey(), KEYEVENTF_KEYUP, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
                             i++;
                         }
-                        if ((it.second.targetShortcut.GetWinKey(it.second.winKeyInvoked) != it.first.GetWinKey(it.second.winKeyInvoked)) && it.first.GetWinKey(it.second.winKeyInvoked) != NULL)
+                        if (it.first.GetWinKey(it.second.winKeyInvoked) != NULL)
                         {
                             KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.first.GetWinKey(it.second.winKeyInvoked), KEYEVENTF_KEYUP, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
                             i++;
                         }
 
-                        // Set new shortcut key down state
-                        if ((it.second.targetShortcut.GetWinKey(it.second.winKeyInvoked) != it.first.GetWinKey(it.second.winKeyInvoked)) && it.second.targetShortcut.GetWinKey(it.second.winKeyInvoked) != NULL)
+                        // Set new key state
+                        DWORD target = std::get<DWORD>(it.second.target);
+
+                        // If a shortcut is remapped to VK_WIN_BOTH, we send VK_LWIN instead
+                        if (target == CommonSharedConstants::VK_WIN_BOTH)
                         {
-                            KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.second.targetShortcut.GetWinKey(it.second.winKeyInvoked), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
-                            i++;
+                            target = VK_LWIN;
                         }
-                        if ((it.second.targetShortcut.GetCtrlKey() != it.first.GetCtrlKey()) && it.second.targetShortcut.GetCtrlKey() != NULL)
-                        {
-                            KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.second.targetShortcut.GetCtrlKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
-                            i++;
-                        }
-                        if ((it.second.targetShortcut.GetAltKey() != it.first.GetAltKey()) && it.second.targetShortcut.GetAltKey() != NULL)
-                        {
-                            KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.second.targetShortcut.GetAltKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
-                            i++;
-                        }
-                        if ((it.second.targetShortcut.GetShiftKey() != it.first.GetShiftKey()) && it.second.targetShortcut.GetShiftKey() != NULL)
-                        {
-                            KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.second.targetShortcut.GetShiftKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
-                            i++;
-                        }
-                        KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)it.second.targetShortcut.GetActionKey(), 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
+
+                        KeyboardManagerHelper::SetKeyEvent(keyEventList, i, INPUT_KEYBOARD, (WORD)target, 0, KeyboardManagerConstants::KEYBOARDMANAGER_SHORTCUT_FLAG);
                         i++;
                     }
 
@@ -385,9 +436,9 @@ namespace KeyboardEventHandlers
             else if (it.second.isShortcutInvoked)
             {
                 // Get the common keys between the two shortcuts
-                int commonKeys = it.first.GetCommonModifiersCount(it.second.targetShortcut);
+                int commonKeys = remapToShortcut ? it.first.GetCommonModifiersCount(std::get<Shortcut>(it.second.target)) : 0;
 
-                // Case 1: If any of the modifier keys of the original shortcut are released before the normal key
+                // Case 1: If any of the modifier keys of the original shortcut are released before the action key
                 if ((it.first.CheckWinKey(data->lParam->vkCode) || it.first.CheckCtrlKey(data->lParam->vkCode) || it.first.CheckAltKey(data->lParam->vkCode) || it.first.CheckShiftKey(data->lParam->vkCode)) && (data->wParam == WM_KEYUP || data->wParam == WM_SYSKEYUP))
                 {
                     // Release new shortcut, and set original shortcut keys except the one released

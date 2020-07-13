@@ -98,7 +98,7 @@ public:
     std::mutex singleKeyToggleToMod_mutex;
 
     // Stores the os level shortcut remappings
-    std::map<Shortcut, std::variant<RemapKey, RemapShortcut>> osLevelShortcutReMap;
+    std::map<Shortcut, RemapShortcut> osLevelShortcutReMap;
     std::mutex osLevelShortcutReMap_mutex;
 
     // Stores the app-specific shortcut remappings. Maps application name to the shortcut map

@@ -3,11 +3,13 @@
 #include <map>
 #include <mutex>
 #include "keyboardmanager/common/KeyboardManagerConstants.h"
+#include <variant>
 
 class InputInterface;
 class KeyboardManagerState;
 class Shortcut;
 class RemapShortcut;
+class RemapKey;
 
 namespace KeyboardEventHandlers
 {
