@@ -123,7 +123,7 @@ void KeyboardManagerState::ClearAppSpecificShortcuts()
     appSpecificShortcutReMap.clear();
 }
 
-// Function to add a new OS level shortcut remapping
+// Function to add a new OS level shortcut to shortcut remapping
 bool KeyboardManagerState::AddOSLevelShortcut(const Shortcut& originalSC, const Shortcut& newSC)
 {
     std::lock_guard<std::mutex> lock(osLevelShortcutReMap_mutex);
@@ -136,6 +136,22 @@ bool KeyboardManagerState::AddOSLevelShortcut(const Shortcut& originalSC, const 
     }
 
     osLevelShortcutReMap[originalSC] = RemapShortcut(newSC);
+    return true;
+}
+
+// Function to add a new OS level shortcut to key remapping
+bool KeyboardManagerState::AddOSLevelShortcut(const Shortcut& originalSC, const DWORD& newRemapKey)
+{
+    std::lock_guard<std::mutex> lock(osLevelShortcutReMap_mutex);
+
+    // Check if the shortcut is already remapped
+    auto it = osLevelShortcutReMap.find(originalSC);
+    if (it != osLevelShortcutReMap.end())
+    {
+        return false;
+    }
+
+    osLevelShortcutReMap[originalSC] = RemapKey(newRemapKey);
     return true;
 }
 
@@ -494,12 +510,23 @@ bool KeyboardManagerState::SaveConfigToFile()
     {
         json::JsonObject keys;
         keys.SetNamedValue(KeyboardManagerConstants::OriginalKeysSettingName, json::value(it.first.ToHstringVK()));
-        keys.SetNamedValue(KeyboardManagerConstants::NewRemapKeysSettingName, json::value(it.second.targetShortcut.ToHstringVK()));
+
+        // For shortcut to key remapping
+        if (it.second.index() == 0)
+        {
+            keys.SetNamedValue(KeyboardManagerConstants::NewRemapKeysSettingName, json::value(winrt::to_hstring((unsigned int)std::get<RemapKey>(it.second).key)));
+        }
+
+        // For shortcut to shortcut remapping
+        else
+        {
+            keys.SetNamedValue(KeyboardManagerConstants::NewRemapKeysSettingName, json::value(std::get<RemapShortcut>(it.second).targetShortcut.ToHstringVK()));
+        }
 
         globalRemapShortcutsArray.Append(keys);
     }
     lockOsLevelShortcutReMap.unlock();
-    
+
     std::unique_lock<std::mutex> lockAppSpecificShortcutReMap(appSpecificShortcutReMap_mutex);
     for (const auto& itApp : appSpecificShortcutReMap)
     {
@@ -511,9 +538,8 @@ bool KeyboardManagerState::SaveConfigToFile()
             keys.SetNamedValue(KeyboardManagerConstants::NewRemapKeysSettingName, json::value(itKeys.second.targetShortcut.ToHstringVK()));
             keys.SetNamedValue(KeyboardManagerConstants::TargetAppSettingName, json::value(itApp.first));
 
-            appSpecificRemapShortcutsArray.Append(keys);        
+            appSpecificRemapShortcutsArray.Append(keys);
         }
-
     }
     lockAppSpecificShortcutReMap.unlock();
 

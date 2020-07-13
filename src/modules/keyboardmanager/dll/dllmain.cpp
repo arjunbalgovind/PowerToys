@@ -112,6 +112,7 @@ public:
                                     {
                                         keyboardManagerState.AddSingleKeyRemap(std::stoul(originalKey.c_str()), Shortcut(newRemapKey.c_str()));
                                     }
+
                                     // If remapped to a key
                                     else
                                     {
@@ -148,9 +149,21 @@ public:
                                     {
                                         auto originalKeys = it.GetObjectW().GetNamedString(KeyboardManagerConstants::OriginalKeysSettingName);
                                         auto newRemapKeys = it.GetObjectW().GetNamedString(KeyboardManagerConstants::NewRemapKeysSettingName);
-                                        Shortcut originalSC(originalKeys.c_str());
-                                        Shortcut newRemapSC(newRemapKeys.c_str());
-                                        keyboardManagerState.AddOSLevelShortcut(originalSC, newRemapSC);
+
+                                        // If remapped to a shortcut
+                                        if (std::wstring(newRemapKeys).find(L";") != std::string::npos)
+                                        {
+                                            Shortcut originalSC(originalKeys.c_str());
+                                            Shortcut newRemapSC(newRemapKeys.c_str());
+                                            keyboardManagerState.AddOSLevelShortcut(originalSC, newRemapSC);
+                                        }
+
+                                        // If remapped to a key
+                                        else
+                                        {
+                                            Shortcut originalSC(originalKeys.c_str());
+                                            keyboardManagerState.AddOSLevelShortcut(originalSC, std::stoul(newRemapKeys.c_str()));
+                                        }
                                     }
                                     catch (...)
                                     {

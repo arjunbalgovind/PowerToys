@@ -254,7 +254,10 @@ void createEditShortcutsWindow(HINSTANCE hInst, KeyboardManagerState& keyboardMa
     std::unique_lock<std::mutex> lockOSLevel(keyboardManagerState.osLevelShortcutReMap_mutex);
     for (const auto& it : keyboardManagerState.osLevelShortcutReMap)
     {
-        ShortcutControl::AddNewShortcutControlRow(shortcutTable, keyboardRemapControlObjects, it.first, it.second.targetShortcut);
+        if (it.second.index() == 0)
+        {
+            ShortcutControl::AddNewShortcutControlRow(shortcutTable, keyboardRemapControlObjects, it.first, std::get<RemapShortcut>(it.second).targetShortcut);
+        }
     }
     lockOSLevel.unlock();
 
