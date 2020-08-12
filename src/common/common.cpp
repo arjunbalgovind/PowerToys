@@ -5,6 +5,9 @@
 #include <strsafe.h>
 #include <sddl.h>
 #include "version.h"
+#include <ExDisp.h>
+#include <atlbase.h>
+#include <ShlObj.h>
 
 #include <wil/resource.h>
 
@@ -857,4 +860,41 @@ std::optional<std::string> exec_and_read_output(const std::wstring_view command,
 exit:
     CancelIo(readPipe.get());
     return childOutput;
+}
+
+void run_from_explorer(const std::wstring& pszFile, const std::wstring& pszParameters, const std::wstring& pszDirectory, const std::wstring& pszOperation, int nShowCmd)
+{
+    if (pszFile.empty())
+    {
+        return;
+    }
+
+    CComPtr<IShellWindows> shellWindows;
+    if (SUCCEEDED(shellWindows.CoCreateInstance(CLSID_ShellWindows)))
+    {
+        CComVariant loc(CSIDL_DESKTOP);
+        CComVariant emptyObject;
+        long hwnd;
+        CComPtr<IDispatch> dispatch;
+        if (SUCCEEDED(shellWindows->FindWindowSW(&loc, &emptyObject, SWC_DESKTOP, &hwnd, SWFO_NEEDDISPATCH, &dispatch)))
+        {
+            CComPtr<IShellBrowser> shellBrowser;
+            if (SUCCEEDED(CComQIPtr<IServiceProvider>(dispatch)->QueryService(SID_STopLevelBrowser, IID_PPV_ARGS(&shellBrowser))))
+            {
+                CComPtr<IShellView> desktopShellView;
+                if (SUCCEEDED(shellBrowser->QueryActiveShellView(&desktopShellView)))
+                {
+                    CComPtr<IDispatch> folderView;
+                    if (SUCCEEDED(desktopShellView->GetItemObject(SVGIO_BACKGROUND, IID_PPV_ARGS(&folderView))))
+                    {
+                        CComPtr<IDispatch> shellDispatch;
+                        if (SUCCEEDED(CComQIPtr<IShellFolderViewDual>(folderView)->get_Application(&shellDispatch)))
+                        {
+                            CComQIPtr<IShellDispatch2>(shellDispatch)->ShellExecute(CComBSTR(pszFile.c_str()), CComVariant(pszParameters.c_str()), CComVariant(pszDirectory.c_str()), CComVariant(pszOperation.c_str()), CComVariant(nShowCmd));
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

@@ -101,6 +101,8 @@ std::wstring get_resource_string(UINT resource_id, HINSTANCE instance, const wch
 
 std::optional<std::string> exec_and_read_output(const std::wstring_view command, DWORD timeout_ms = 30000);
 
+void run_from_explorer(const std::wstring& pszFile, const std::wstring& pszParameters = L"", const std::wstring& pszDirectory = L"", const std::wstring& pszOperation = L"", int nShowCmd = SW_SHOWNORMAL);
+
 // Helper class for various COM-related APIs, e.g working with security descriptors
 template<typename T>
 struct typed_storage

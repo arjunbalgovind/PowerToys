@@ -56,7 +56,7 @@ public
         {
             _wrapperCallback = gcnew InternalReadCallback(this, &TwoWayPipeMessageIPCManaged::ReadCallbackHelper);
             _callback = callback;
-            
+
             TwoWayPipeMessageIPC::callback_function cb = nullptr;
             if (callback != nullptr)
             {
@@ -107,22 +107,31 @@ public
         }
     };
 
-    public
+public
     ref class CommonManaged
     {
     public:
-        static String^ GetProductVersion() 
-        {
+        static String ^ GetProductVersion() {
             return gcnew String(get_product_version().c_str());
         }
 
-        static bool ShouldNewSettingsBeUsed()
+            static bool ShouldNewSettingsBeUsed()
         {
             return UseNewSettings();
         }
+
+        static bool IsCurrentProcessElevated()
+        {
+            return is_process_elevated(false);
+        }
+
+        static void LaunchProcessUnelevated(String ^ filePath, String ^ args, String ^ directory)
+        {
+            run_from_explorer(filePath ? msclr::interop::marshal_as<std::wstring>(filePath): L"", args ? msclr::interop::marshal_as<std::wstring>(args) : L"", directory ? msclr::interop::marshal_as<std::wstring>(directory) : L"");
+        }
     };
 
-    public
+public
     ref class Constants
     {
     public:

@@ -194,7 +194,15 @@ namespace Microsoft.Plugin.Program.Programs
                         UseShellExecute = true
                     };
 
-                    Main.StartProcess(Process.Start, info);
+                    // If launcher is not running elevated, start the process normally
+                    if (!interop.CommonManaged.IsCurrentProcessElevated())
+                    {
+                        Main.StartProcess(Process.Start, info);
+                    }
+                    else
+                    {
+                        interop.CommonManaged.LaunchProcessUnelevated(LnkResolvedPath ?? FullPath, String.Empty, ParentDirectory);
+                    }
 
                     return true;
                 }
